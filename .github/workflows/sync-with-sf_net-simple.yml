@@ -1,0 +1,40 @@
+# This git branch (sync_with_sourceforge) exists solely for running Git Action
+# if re-run of workflow is not visible, updating and commiting workflow file should help to get re-run back
+name: Sync with sourceforge, simpler flow
+
+on:
+  #schedule:
+  # Scheduled workflows only run if the workflow file exists on the default branch.
+  #  - cron: "*/30 * * * *"  # every 30 minutes
+  workflow_dispatch:
+  push:
+    branches:
+      - sync_with_sourceforge
+
+permissions:
+  contents: write
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout mirror repo
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Add upstream
+        run: |
+          git remote add upstream https://git.code.sf.net/p/log4cpp/codegit
+
+      - name: Fetch upstream
+        run: |
+          git fetch --prune upstream
+
+      - name: Push mirror
+        run: |
+          git push origin refs/remotes/upstream/master:refs/heads/master --force
+          git push origin --tags
