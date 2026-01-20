@@ -38,3 +38,4 @@ jobs:
         run: |
           git push origin refs/remotes/upstream/master:refs/heads/master --force
           git push origin --tags
+
