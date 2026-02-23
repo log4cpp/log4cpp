@@ -1,6 +1,7 @@
 # This git branch (sync_with_sourceforge) exists solely for running Git Action
 # if re-run of workflow is not visible, updating and commiting workflow file should help to get re-run back
-name: Sync with sourceforge, simpler flow
+# Workflow permissions
+name: Sync with sourceforge master branch. Build project with CMake and run Ctest
 
 on:
   #schedule:
@@ -10,6 +11,10 @@ on:
   push:
     branches:
       - sync_with_sourceforge
+
+concurrency:
+  group: mirror-sf-master-build
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -38,4 +43,34 @@ jobs:
         run: |
           git push origin refs/remotes/upstream/master:refs/heads/master --force
           git push origin --tags
+  build:
+    name: ${{ matrix.os }}-${{ matrix.build_type }}
+    runs-on: ${{ matrix.os }}
 
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+#        os: [ubuntu-latest, windows-latest, macos-latest]
+        build_type: [Release]
+
+    steps:
+    - name: Checkout repo's master branch, no history
+      uses: actions/checkout@v4
+      with:
+        ref: master
+        fetch-depth: 0
+        fetch-tags: true
+
+    - name: Setup CMake
+      uses: lukka/get-cmake@latest
+
+    - name: Configure
+      run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+
+    - name: Build
+      run: cmake --build build --config ${{ matrix.build_type }}
+
+    - name: Test
+      working-directory: build
+      run: ctest --output-on-failure -C ${{ matrix.build_type }}
